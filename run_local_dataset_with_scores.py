@@ -63,6 +63,7 @@ def run_local_dataset_with实时输出(dataset_path, split='test'):
                 bbox = out['target_bbox']
                 score_map = out.get('score_map', None)
                 best_score = out.get('best_score', None)
+                attn_weights = out.get('attn_weights', None)
                 
                 # 输出跟踪结果
                 print(f"\nFrame {frame_num}/{len(seq.frames)-1}:")
@@ -72,6 +73,9 @@ def run_local_dataset_with实时输出(dataset_path, split='test'):
                 if score_map is not None:
                     print(f"Score map shape: {score_map.shape}")
                     print(f"Score map min: {np.min(score_map):.4f}, max: {np.max(score_map):.4f}, mean: {np.mean(score_map):.4f}")
+                if attn_weights is not None:
+                    print(f"Attention weights shape: {attn_weights.shape}")
+                    print(f"Attention weights min: {np.min(attn_weights):.4f}, max: {np.max(attn_weights):.4f}, mean: {np.mean(attn_weights):.4f}")
                 
                 # 这里可以添加你的对抗攻击代码
                 # 使用 bbox 和 score_map 构造损失函数

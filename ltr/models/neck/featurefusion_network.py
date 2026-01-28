@@ -142,10 +142,12 @@ class DecoderCFALayer(nn.Module):
                      pos_enc: Optional[Tensor] = None,
                      pos_dec: Optional[Tensor] = None):
 
-        tgt2 = self.multihead_attn(query=self.with_pos_embed(tgt, pos_dec),
+        tgt2, attn_weights = self.multihead_attn(query=self.with_pos_embed(tgt, pos_dec),
                                    key=self.with_pos_embed(memory, pos_enc),
                                    value=memory, attn_mask=memory_mask,
-                                   key_padding_mask=memory_key_padding_mask)[0]
+                                   key_padding_mask=memory_key_padding_mask)
+        # 保存注意力权重
+        self.attn_weights = attn_weights
         tgt = tgt + self.dropout1(tgt2)
         tgt = self.norm1(tgt)
         tgt2 = self.linear2(self.dropout(self.activation(self.linear1(tgt))))

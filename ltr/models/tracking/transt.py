@@ -77,7 +77,13 @@ class TransT(nn.Module):
 
         outputs_class = self.class_embed(hs)
         outputs_coord = self.bbox_embed(hs).sigmoid()
-        out = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1]}
+        
+        # 获取注意力权重
+        attn_weights = None
+        if hasattr(self.featurefusion_network.decoder.layers[0], 'attn_weights'):
+            attn_weights = self.featurefusion_network.decoder.layers[0].attn_weights
+        
+        out = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1], 'attn_weights': attn_weights}
         return out
 
     def template(self, z):

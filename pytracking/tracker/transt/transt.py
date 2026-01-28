@@ -89,6 +89,11 @@ class TransT(SiameseTracker):
         outputs = self.net.track(x_crop)
         score = self._convert_score(outputs['pred_logits'])
         pred_bbox = self._convert_bbox(outputs['pred_boxes'])
+        
+        # 获取注意力权重
+        attn_weights = None
+        if 'attn_weights' in outputs and outputs['attn_weights'] is not None:
+            attn_weights = outputs['attn_weights'].detach().cpu().numpy()
 
         # def change(r):
         #     return np.maximum(r, 1. / r)
@@ -140,5 +145,6 @@ class TransT(SiameseTracker):
 
         out = {'target_bbox': bbox,
                'best_score': pscore,
-               'score_map': score}  # 添加得分图
+               'score_map': score,
+               'attn_weights': attn_weights}  # 添加注意力权重
         return out
