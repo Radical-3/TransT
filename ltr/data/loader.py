@@ -2,7 +2,12 @@ import torch
 import torch.utils.data.dataloader
 import importlib
 import collections
-from torch._six import string_classes, int_classes
+# 兼容不同版本的 PyTorch
+if torch.__version__ >= '1.6.0':
+    string_classes = str
+    int_classes = int
+else:
+    from torch._six import string_classes, int_classes
 from pytracking import TensorDict, TensorList
 
 

@@ -6,16 +6,16 @@ def local_env_settings():
     # Set your local paths here.
 
     settings.davis_dir = ''
-    settings.got10k_path = ''
+    settings.got10k_path = 'D:\code\TransT\dataset/got10k'
     settings.got_packed_results_path = ''
     settings.got_reports_path = ''
     settings.lasot_path = ''
-    settings.network_path = '/media/he/08B1167608B11676/code/TransT/pytracking/networks/'    # Where tracking networks are stored.
+    settings.network_path = 'D:\code\TransT\pytracking/networks/'    # Where tracking networks are stored.
     settings.nfs_path = ''
     settings.otb_path = ''
-    settings.result_plot_path = '/media/he/08B1167608B11676/code/TransT/pytracking/result_plots/'
-    settings.results_path = '/media/he/08B1167608B11676/code/TransT/pytracking/tracking_results/'    # Where to store tracking results
-    settings.segmentation_path = '/media/he/08B1167608B11676/code/TransT/pytracking/segmentation_results/'
+    settings.result_plot_path = 'D:\code\TransT\pytracking/result_plots/'
+    settings.results_path = 'D:\code\TransT\pytracking/tracking_results/'    # Where to store tracking results
+    settings.segmentation_path = 'D:\code\TransT\pytracking/segmentation_results/'
     settings.tn_packed_results_path = ''
     settings.tpl_path = ''
     settings.trackingnet_path = ''
