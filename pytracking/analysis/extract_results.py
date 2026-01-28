@@ -126,7 +126,7 @@ def extract_results(trackers, dataset, report_name, skip_missing_seq=False, plot
 
     for seq_id, seq in enumerate(tqdm(dataset)):
         # Load anno
-        anno_bb = torch.tensor(seq.ground_truth_rect)
+        anno_bb = torch.tensor(seq.ground_truth_rect, dtype=torch.float64)
         target_visible = torch.tensor(seq.target_visible, dtype=torch.uint8) if seq.target_visible is not None else None
         for trk_id, trk in enumerate(trackers):
             # Load results

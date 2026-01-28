@@ -8,24 +8,34 @@ class MyLocalDataset(BaseDataset):
     """
     自定义本地数据集读取类，适配以下格式：
     数据集根目录/
-    ├── 序列文件夹1/
-    │   ├── 0001.jpg
-    │   ├── 0002.jpg
-    │   ├── ...
-    │   └── groundtruth.txt
-    ├── 序列文件夹2/
-    │   ├── 0001.jpg
-    │   ├── ...
-    │   └── groundtruth.txt
-    ...
+    ├── train/
+    │   ├── 序列文件夹1/
+    │   │   ├── 0001.jpg
+    │   │   ├── 0002.jpg
+    │   │   ├── ...
+    │   │   └── groundtruth.txt
+    │   ├── 序列文件夹2/
+    │   │   ├── 0001.jpg
+    │   │   ├── ...
+    │   │   └── groundtruth.txt
+    │   └── list.txt  # 指定训练序列
+    ├── test/
+    │   ├── 序列文件夹1/
+    │   │   ├── 0001.jpg
+    │   │   ├── ...
+    │   │   └── groundtruth.txt
+    │   └── list.txt  # 指定测试序列
     """
-    def __init__(self, dataset_path):
+    def __init__(self, dataset_path, split='test'):
         """
         args:
             dataset_path: 你的数据集根目录路径（例如 '/home/user/my_dataset'）
+            split: 数据集分割，可选 'train' 或 'test'
         """
         super().__init__()
         self.base_path = dataset_path  # 数据集根目录
+        self.split = split  # 选择训练或测试分割
+        self.split_path = os.path.join(self.base_path, self.split)  # 分割路径（train或test）
         self.sequence_info_list = self._get_sequence_info_list()  # 获取所有序列信息
 
     def get_sequence_list(self):
@@ -43,7 +53,7 @@ class MyLocalDataset(BaseDataset):
         start_frame = sequence_info['startFrame']
         end_frame = sequence_info['endFrame']
 
-        # 生成所有帧的路径列表（例如：/root/seq1/0001.jpg）
+        # 生成所有帧的路径列表（例如：/root/train/seq1/0001.jpg）
         frames = [
             os.path.join(self.base_path, seq_path, f"{frame_num:0{nz}}.{ext}")
             for frame_num in range(start_frame, end_frame + 1)
@@ -78,24 +88,46 @@ class MyLocalDataset(BaseDataset):
         return gt
 
     def _get_sequence_info_list(self):
-        """遍历数据集根目录，收集所有序列的信息"""
+        """遍历数据集分割目录，收集所有序列的信息"""
         sequence_info_list = []
-        # 遍历根目录下的所有子文件夹（每个子文件夹对应一个序列）
-        for seq_name in os.listdir(self.base_path):
-            seq_path = os.path.join(self.base_path, seq_name)
+        
+        # 读取list.txt文件，获取要使用的序列列表
+        list_file = os.path.join(self.split_path, "list.txt")
+        selected_sequences = []
+        
+        if os.path.exists(list_file):
+            # 读取list.txt文件，每行一个序列名称
+            with open(list_file, 'r', encoding='utf-8') as f:
+                selected_sequences = [line.strip() for line in f if line.strip()]
+            print(f"从 {list_file} 加载了 {len(selected_sequences)} 个序列")
+        else:
+            # 如果list.txt不存在，使用目录下所有文件夹作为序列
+            print(f"警告：{list_file} 不存在，将使用所有子文件夹作为序列")
+            selected_sequences = [d for d in os.listdir(self.split_path) 
+                                if os.path.isdir(os.path.join(self.split_path, d))]
+        
+        # 遍历选中的序列
+        for seq_name in selected_sequences:
+            seq_path = os.path.join(self.split, seq_name)  # 相对路径，如 train/seq1
+            full_seq_path = os.path.join(self.base_path, seq_path)  # 绝对路径
+            
             # 只处理文件夹
-            if not os.path.isdir(seq_path):
+            if not os.path.isdir(full_seq_path):
+                print(f"警告：{seq_name} 不是文件夹，已跳过")
                 continue
+                
             # 检查标注文件是否存在
-            anno_file = os.path.join(seq_path, "groundtruth.txt")
+            anno_file = os.path.join(full_seq_path, "groundtruth.txt")
             if not os.path.exists(anno_file):
                 print(f"警告：序列 {seq_name} 缺少 groundtruth.txt，已跳过")
                 continue
+                
             # 获取所有图片文件，推断命名格式
-            img_files = [f for f in os.listdir(seq_path) if f.endswith(('.jpg', '.png', '.jpeg'))]
+            img_files = [f for f in os.listdir(full_seq_path) if f.endswith(('.jpg', '.png', '.jpeg'))]
             if not img_files:
                 print(f"警告：序列 {seq_name} 缺少图片文件，已跳过")
                 continue
+                
             # 提取图片文件名中的数字（假设文件名是纯数字+扩展名，如0001.jpg）
             try:
                 # 排序图片文件，确保帧顺序正确
@@ -113,10 +145,11 @@ class MyLocalDataset(BaseDataset):
             except ValueError:
                 print(f"警告：序列 {seq_name} 的图片命名格式不规范（需纯数字+扩展名），已跳过")
                 continue
+                
             # 收集序列信息（可根据需要添加object_class等）
             sequence_info = {
                 "name": seq_name,
-                "path": seq_name,  # 序列在数据集根目录下的相对路径
+                "path": seq_path,  # 序列在数据集根目录下的相对路径，如 train/seq1
                 "startFrame": start_frame,
                 "endFrame": end_frame,
                 "nz": nz,  # 数字位数
@@ -124,6 +157,8 @@ class MyLocalDataset(BaseDataset):
                 "object_class": "unknown"  # 可选：可手动指定或从文件夹名提取
             }
             sequence_info_list.append(sequence_info)
+            
+        print(f"成功加载 {len(sequence_info_list)} 个序列")
         return sequence_info_list
 
     def __len__(self):
@@ -133,13 +168,32 @@ class MyLocalDataset(BaseDataset):
 # 使用示例
 if __name__ == "__main__":
     # 替换为你的数据集根目录
-    dataset = MyLocalDataset(dataset_path="../../dataset/local_dataset")
-    # 获取所有序列
-    sequences = dataset.get_sequence_list()
-    # 打印第一个序列的信息
-    if sequences:
-        first_seq = sequences[0]
-        print(f"第一个序列名称：{first_seq.name}")
-        print(f"帧数：{len(first_seq.frames)}")
-        print(f"第一帧路径：{first_seq.frames[0]}")
-        print(f"第一帧标注：{first_seq.ground_truth_rect[0]}")
+    dataset_root = "dataset/local_dataset"
+    
+    # 加载测试数据集
+    print("加载测试数据集...")
+    test_dataset = MyLocalDataset(dataset_path=dataset_root, split='test')
+    test_sequences = test_dataset.get_sequence_list()
+    
+    # 打印测试数据集信息
+    if test_sequences:
+        print(f"测试数据集包含 {len(test_sequences)} 个序列")
+        first_test_seq = test_sequences[0]
+        print(f"第一个测试序列名称：{first_test_seq.name}")
+        print(f"帧数：{len(first_test_seq.frames)}")
+        print(f"第一帧路径：{first_test_seq.frames[0]}")
+        print(f"第一帧标注：{first_test_seq.ground_truth_rect[0]}")
+    
+    # 加载训练数据集
+    print("\n加载训练数据集...")
+    train_dataset = MyLocalDataset(dataset_path=dataset_root, split='train')
+    train_sequences = train_dataset.get_sequence_list()
+    
+    # 打印训练数据集信息
+    if train_sequences:
+        print(f"训练数据集包含 {len(train_sequences)} 个序列")
+        first_train_seq = train_sequences[0]
+        print(f"第一个训练序列名称：{first_train_seq.name}")
+        print(f"帧数：{len(first_train_seq.frames)}")
+        print(f"第一帧路径：{first_train_seq.frames[0]}")
+        print(f"第一帧标注：{first_train_seq.ground_truth_rect[0]}")

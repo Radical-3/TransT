@@ -167,3 +167,17 @@ class SequenceList(list):
 
     def copy(self):
         return SequenceList(super(SequenceList, self).copy())
+
+
+def get_local_dataset(dataset_path, split='test'):
+    """
+    获取本地数据集的函数
+    args:
+        dataset_path: 数据集根目录路径
+        split: 数据集分割，可选 'train' 或 'test'
+    returns:
+        本地数据集的SequenceList对象
+    """
+    from pytracking.evaluation.localdataset import MyLocalDataset
+    dataset = MyLocalDataset(dataset_path=dataset_path, split=split)
+    return dataset.get_sequence_list()
