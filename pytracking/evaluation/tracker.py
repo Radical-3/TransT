@@ -167,7 +167,8 @@ class Tracker:
 
         output = {'target_bbox': [],
                   'time': [],
-                  'segmentation': []}
+                  'segmentation': [],
+                  'score_map': []}
 
         def _store_outputs(tracker_out: dict, defaults=None):
             defaults = {} if defaults is None else defaults

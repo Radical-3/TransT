@@ -139,5 +139,6 @@ class TransT(SiameseTracker):
                 height]
 
         out = {'target_bbox': bbox,
-               'best_score': pscore}
+               'best_score': pscore,
+               'score_map': score}  # 添加得分图
         return out
