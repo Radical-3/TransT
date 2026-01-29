@@ -94,6 +94,14 @@ class TransT(SiameseTracker):
         attn_weights = None
         if 'attn_weights' in outputs and outputs['attn_weights'] is not None:
             attn_weights = outputs['attn_weights'].detach().cpu().numpy()
+        
+        # 获取中间层注意力权重
+        intermediate_attn_weights = None
+        if 'intermediate_attn_weights' in outputs and outputs['intermediate_attn_weights'] is not None:
+            intermediate_attn_weights = {}
+            for key, value in outputs['intermediate_attn_weights'].items():
+                if value is not None:
+                    intermediate_attn_weights[key] = value.detach().cpu().numpy()
 
         # def change(r):
         #     return np.maximum(r, 1. / r)
@@ -146,5 +154,6 @@ class TransT(SiameseTracker):
         out = {'target_bbox': bbox,
                'best_score': pscore,
                'score_map': score,
-               'attn_weights': attn_weights}  # 添加注意力权重
+               'attn_weights': attn_weights,
+               'intermediate_attn_weights': intermediate_attn_weights}  # 添加注意力权重
         return out

@@ -212,26 +212,33 @@ class FeatureFusionLayer(nn.Module):
                      pos_src1: Optional[Tensor] = None,
                      pos_src2: Optional[Tensor] = None):
         q1 = k1 = self.with_pos_embed(src1, pos_src1)
-        src12 = self.self_attn1(q1, k1, value=src1, attn_mask=src1_mask,
-                               key_padding_mask=src1_key_padding_mask)[0]
+        src12, self_attn1_weights = self.self_attn1(q1, k1, value=src1, attn_mask=src1_mask,
+                               key_padding_mask=src1_key_padding_mask)
+        # 保存自注意力权重
+        self.self_attn1_weights = self_attn1_weights
         src1 = src1 + self.dropout11(src12)
         src1 = self.norm11(src1)
 
         q2 = k2 = self.with_pos_embed(src2, pos_src2)
-        src22 = self.self_attn2(q2, k2, value=src2, attn_mask=src2_mask,
-                               key_padding_mask=src2_key_padding_mask)[0]
+        src22, self_attn2_weights = self.self_attn2(q2, k2, value=src2, attn_mask=src2_mask,
+                               key_padding_mask=src2_key_padding_mask)
+        # 保存自注意力权重
+        self.self_attn2_weights = self_attn2_weights
         src2 = src2 + self.dropout21(src22)
         src2 = self.norm21(src2)
 
 
-        src12 = self.multihead_attn1(query=self.with_pos_embed(src1, pos_src1),
+        src12, cross_attn1_weights = self.multihead_attn1(query=self.with_pos_embed(src1, pos_src1),
                                    key=self.with_pos_embed(src2, pos_src2),
                                    value=src2, attn_mask=src2_mask,
-                                   key_padding_mask=src2_key_padding_mask)[0]
-        src22 = self.multihead_attn2(query=self.with_pos_embed(src2, pos_src2),
+                                   key_padding_mask=src2_key_padding_mask)
+        src22, cross_attn2_weights = self.multihead_attn2(query=self.with_pos_embed(src2, pos_src2),
                                    key=self.with_pos_embed(src1, pos_src1),
                                    value=src1, attn_mask=src1_mask,
-                                   key_padding_mask=src1_key_padding_mask)[0]
+                                   key_padding_mask=src1_key_padding_mask)
+        # 保存交叉注意力权重
+        self.cross_attn1_weights = cross_attn1_weights
+        self.cross_attn2_weights = cross_attn2_weights
 
         src1 = src1 + self.dropout12(src12)
         src1 = self.norm12(src1)

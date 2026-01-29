@@ -83,7 +83,20 @@ class TransT(nn.Module):
         if hasattr(self.featurefusion_network.decoder.layers[0], 'attn_weights'):
             attn_weights = self.featurefusion_network.decoder.layers[0].attn_weights
         
-        out = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1], 'attn_weights': attn_weights}
+        # 获取中间层注意力权重
+        intermediate_attn_weights = {}
+        if hasattr(self.featurefusion_network.encoder, 'layers'):
+            for i, layer in enumerate(self.featurefusion_network.encoder.layers):
+                if hasattr(layer, 'self_attn1_weights'):
+                    intermediate_attn_weights[f'layer{i}_self_attn1'] = layer.self_attn1_weights
+                if hasattr(layer, 'self_attn2_weights'):
+                    intermediate_attn_weights[f'layer{i}_self_attn2'] = layer.self_attn2_weights
+                if hasattr(layer, 'cross_attn1_weights'):
+                    intermediate_attn_weights[f'layer{i}_cross_attn1'] = layer.cross_attn1_weights
+                if hasattr(layer, 'cross_attn2_weights'):
+                    intermediate_attn_weights[f'layer{i}_cross_attn2'] = layer.cross_attn2_weights
+        
+        out = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1], 'attn_weights': attn_weights, 'intermediate_attn_weights': intermediate_attn_weights}
         return out
 
     def template(self, z):
