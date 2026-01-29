@@ -10,18 +10,18 @@ class MyLocalDataset(BaseDataset):
     数据集根目录/
     ├── train/
     │   ├── 序列文件夹1/
-    │   │   ├── 0001.jpg
-    │   │   ├── 0002.jpg
+    │   │   ├── 0001.npy
+    │   │   ├── 0002.npy
     │   │   ├── ...
     │   │   └── groundtruth.txt
     │   ├── 序列文件夹2/
-    │   │   ├── 0001.jpg
+    │   │   ├── 0001.npy
     │   │   ├── ...
     │   │   └── groundtruth.txt
     │   └── list.txt  # 指定训练序列
     ├── test/
     │   ├── 序列文件夹1/
-    │   │   ├── 0001.jpg
+    │   │   ├── 0001.npy
     │   │   ├── ...
     │   │   └── groundtruth.txt
     │   └── list.txt  # 指定测试序列
@@ -46,14 +46,14 @@ class MyLocalDataset(BaseDataset):
         """构建单个序列对象，包含帧路径和标注"""
         # 序列文件夹路径
         seq_path = sequence_info['path']
-        # 图片文件名格式（数字位数和扩展名）
-        nz = sequence_info['nz']  # 数字位数（如4表示0001.jpg）
-        ext = sequence_info['ext']  # 扩展名（如jpg）
+        # 文件名格式（数字位数和扩展名）
+        nz = sequence_info['nz']  # 数字位数（如4表示0001.npy）
+        ext = sequence_info['ext']  # 扩展名（如npy）
         # 帧范围
         start_frame = sequence_info['startFrame']
         end_frame = sequence_info['endFrame']
 
-        # 生成所有帧的路径列表（例如：/root/train/seq1/0001.jpg）
+        # 生成所有帧的路径列表（例如：/root/train/seq1/0001.npy）
         frames = [
             os.path.join(self.base_path, seq_path, f"{frame_num:0{nz}}.{ext}")
             for frame_num in range(start_frame, end_frame + 1)
@@ -122,28 +122,28 @@ class MyLocalDataset(BaseDataset):
                 print(f"警告：序列 {seq_name} 缺少 groundtruth.txt，已跳过")
                 continue
                 
-            # 获取所有图片文件，推断命名格式
-            img_files = [f for f in os.listdir(full_seq_path) if f.endswith(('.jpg', '.png', '.jpeg'))]
-            if not img_files:
-                print(f"警告：序列 {seq_name} 缺少图片文件，已跳过")
+            # 获取所有npy文件，推断命名格式
+            npy_files = [f for f in os.listdir(full_seq_path) if f.endswith('.npy')]
+            if not npy_files:
+                print(f"警告：序列 {seq_name} 缺少npy文件，已跳过")
                 continue
                 
-            # 提取图片文件名中的数字（假设文件名是纯数字+扩展名，如0001.jpg）
+            # 提取文件名中的数字（假设文件名是纯数字+扩展名，如0001.npy）
             try:
-                # 排序图片文件，确保帧顺序正确
-                img_files.sort()
-                # 取第一张和最后一张图片的编号
-                first_img = img_files[0]
-                last_img = img_files[-1]
-                # 提取数字部分（例如"0001.jpg" -> 1）
-                start_frame = int(os.path.splitext(first_img)[0])
-                end_frame = int(os.path.splitext(last_img)[0])
+                # 排序npy文件，确保帧顺序正确
+                npy_files.sort()
+                # 取第一张和最后一张文件的编号
+                first_npy = npy_files[0]
+                last_npy = npy_files[-1]
+                # 提取数字部分（例如"0001.npy" -> 1）
+                start_frame = int(os.path.splitext(first_npy)[0])
+                end_frame = int(os.path.splitext(last_npy)[0])
                 # 推断数字位数（例如"0001"是4位）
-                nz = len(os.path.splitext(first_img)[0])
-                # 推断扩展名（例如jpg）
-                ext = os.path.splitext(first_img)[1][1:]  # 去掉小数点
+                nz = len(os.path.splitext(first_npy)[0])
+                # 推断扩展名（例如npy）
+                ext = os.path.splitext(first_npy)[1][1:]  # 去掉小数点
             except ValueError:
-                print(f"警告：序列 {seq_name} 的图片命名格式不规范（需纯数字+扩展名），已跳过")
+                print(f"警告：序列 {seq_name} 的文件命名格式不规范（需纯数字+扩展名），已跳过")
                 continue
                 
             # 收集序列信息（可根据需要添加object_class等）
@@ -153,7 +153,7 @@ class MyLocalDataset(BaseDataset):
                 "startFrame": start_frame,
                 "endFrame": end_frame,
                 "nz": nz,  # 数字位数
-                "ext": ext,  # 图片扩展名
+                "ext": ext,  # 文件扩展名
                 "object_class": "unknown"  # 可选：可手动指定或从文件夹名提取
             }
             sequence_info_list.append(sequence_info)

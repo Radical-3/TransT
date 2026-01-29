@@ -37,8 +37,92 @@ def run_local_dataset_with实时输出(dataset_path, split='test'):
             
             # 初始化跟踪器
             print("Initializing tracker...")
-            first_frame = cv.imread(seq.frames[0])
-            first_frame = cv.cvtColor(first_frame, cv.COLOR_BGR2RGB)
+            # 读取npy文件并提取图像数据，设置allow_pickle=True以支持包含对象的数组
+            first_frame_data = np.load(seq.frames[0], allow_pickle=True)
+            
+            # 处理不同格式的npy文件
+            if isinstance(first_frame_data, dict):
+                # 情况1: 直接是字典格式，包含'image'键
+                first_frame = first_frame_data['image']
+                print("Info: Using direct dict format")
+            elif isinstance(first_frame_data, np.ndarray):
+                if first_frame_data.ndim == 0:
+                    # 情况2: 维度为0的数组，转换为对象后是字典
+                    try:
+                        data_obj = first_frame_data.item()
+                        if isinstance(data_obj, dict) and 'image' in data_obj:
+                            first_frame = data_obj['image']
+                            print("Info: Using 0D array converted to dict")
+                        else:
+                            print(f"Error: 0D array contains unexpected object type: {type(data_obj)}")
+                            raise
+                    except Exception as e:
+                        print(f"Error: Failed to process 0D array: {e}")
+                        print(f"File path: {seq.frames[0]}")
+                        raise
+                elif first_frame_data.shape == (1,):
+                    # 情况3: 形状为(1,)的数组，第一个元素是字典
+                    data_obj = first_frame_data[0]
+                    if isinstance(data_obj, dict) and 'image' in data_obj:
+                        first_frame = data_obj['image']
+                        print("Info: Using (1,) array with dict element")
+                    else:
+                        print(f"Error: (1,) array contains unexpected object type: {type(data_obj)}")
+                        raise
+                elif first_frame_data.shape == (6,):
+                    # 情况4: 形状为(6,)的数组，顺序: identifier, image, image_mask, label, camera_position, relative_remove
+                    first_frame = first_frame_data[1]
+                    print("Info: Using (6,) array with image at index 1")
+                elif first_frame_data.ndim == 1:
+                    # 其他一维数组情况
+                    try:
+                        data_obj = first_frame_data.item()
+                        if isinstance(data_obj, dict):
+                            first_frame = data_obj['image']
+                            print("Info: Converted 1D array to dict and extracted image")
+                        else:
+                            print(f"Error: 1D array contains unexpected object type: {type(data_obj)}")
+                            raise
+                    except Exception as e:
+                        print(f"Error: Failed to process 1D array: {e}")
+                        print(f"File path: {seq.frames[0]}")
+                        print(f"Array shape: {first_frame_data.shape}")
+                        print(f"Array dtype: {first_frame_data.dtype}")
+                        raise
+                else:
+                    # 假设是直接的图像数据
+                    first_frame = first_frame_data
+                    print(f"Info: Using {first_frame_data.ndim}D array as image data")
+            else:
+                # 其他格式，尝试转换为字典
+                try:
+                    data_obj = first_frame_data.item()
+                    if isinstance(data_obj, dict) and 'image' in data_obj:
+                        first_frame = data_obj['image']
+                        print("Info: Converted scalar to dict and extracted image")
+                    else:
+                        print(f"Error: Scalar contains unexpected object type: {type(data_obj)}")
+                        raise
+                except Exception as e:
+                    print(f"Error: Failed to extract image from npy file: {e}")
+                    print(f"File path: {seq.frames[0]}")
+                    print(f"Data type: {type(first_frame_data)}")
+                    raise
+            
+            # 确保图像格式正确 (RGB, 0-255, uint8)
+            if first_frame.dtype == np.float32:
+                first_frame = (first_frame * 255).astype(np.uint8)
+            
+            # 检查图像维度
+            if first_frame.ndim != 3:
+                print(f"Error: Image array has incorrect dimensions: {first_frame.ndim}D, expected 3D (H, W, C)")
+                print(f"File path: {seq.frames[0]}")
+                print(f"Array shape: {first_frame.shape}")
+                raise ValueError(f"Expected 3D image array, got {first_frame.ndim}D array")
+            
+            # 检查通道数
+            if first_frame.shape[2] != 3:
+                print(f"Warning: Image array has {first_frame.shape[2]} channels, expected 3 (RGB)")
             init_info = seq.init_info()
             out = tracker_instance.initialize(first_frame, init_info)
             
@@ -48,9 +132,85 @@ def run_local_dataset_with实时输出(dataset_path, split='test'):
             # 遍历后续帧
             print("Tracking frames...")
             for frame_num, frame_path in enumerate(tqdm(seq.frames[1:], desc="Processing frames"), start=1):
-                # 加载当前帧
-                frame = cv.imread(frame_path)
-                frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+                # 加载当前帧，设置allow_pickle=True以支持包含对象的数组
+                frame_data = np.load(frame_path, allow_pickle=True)
+                
+                # 处理不同格式的npy文件
+                if isinstance(frame_data, dict):
+                    # 情况1: 直接是字典格式，包含'image'键
+                    frame = frame_data['image']
+                elif isinstance(frame_data, np.ndarray):
+                    if frame_data.ndim == 0:
+                        # 情况2: 维度为0的数组，转换为对象后是字典
+                        try:
+                            data_obj = frame_data.item()
+                            if isinstance(data_obj, dict) and 'image' in data_obj:
+                                frame = data_obj['image']
+                            else:
+                                print(f"Error: 0D array contains unexpected object type: {type(data_obj)}")
+                                raise
+                        except Exception as e:
+                            print(f"Error: Failed to process 0D array: {e}")
+                            print(f"File path: {frame_path}")
+                            raise
+                    elif frame_data.shape == (1,):
+                        # 情况3: 形状为(1,)的数组，第一个元素是字典
+                        data_obj = frame_data[0]
+                        if isinstance(data_obj, dict) and 'image' in data_obj:
+                            frame = data_obj['image']
+                        else:
+                            print(f"Error: (1,) array contains unexpected object type: {type(data_obj)}")
+                            raise
+                    elif frame_data.shape == (6,):
+                        # 情况4: 形状为(6,)的数组，顺序: identifier, image, image_mask, label, camera_position, relative_remove
+                        frame = frame_data[1]
+                    elif frame_data.ndim == 1:
+                        # 其他一维数组情况
+                        try:
+                            data_obj = frame_data.item()
+                            if isinstance(data_obj, dict):
+                                frame = data_obj['image']
+                            else:
+                                print(f"Error: 1D array contains unexpected object type: {type(data_obj)}")
+                                raise
+                        except Exception as e:
+                            print(f"Error: Failed to process 1D array: {e}")
+                            print(f"File path: {frame_path}")
+                            print(f"Array shape: {frame_data.shape}")
+                            print(f"Array dtype: {frame_data.dtype}")
+                            raise
+                    else:
+                        # 假设是直接的图像数据
+                        frame = frame_data
+                else:
+                    # 其他格式，尝试转换为字典
+                    try:
+                        data_obj = frame_data.item()
+                        if isinstance(data_obj, dict) and 'image' in data_obj:
+                            frame = data_obj['image']
+                        else:
+                            print(f"Error: Scalar contains unexpected object type: {type(data_obj)}")
+                            raise
+                    except Exception as e:
+                        print(f"Error: Failed to extract image from npy file: {e}")
+                        print(f"File path: {frame_path}")
+                        print(f"Data type: {type(frame_data)}")
+                        raise
+                
+                # 确保图像格式正确 (RGB, 0-255, uint8)
+                if frame.dtype == np.float32:
+                    frame = (frame * 255).astype(np.uint8)
+                
+                # 检查图像维度
+                if frame.ndim != 3:
+                    print(f"Error: Image array has incorrect dimensions: {frame.ndim}D, expected 3D (H, W, C)")
+                    print(f"File path: {frame_path}")
+                    print(f"Array shape: {frame.shape}")
+                    raise ValueError(f"Expected 3D image array, got {frame.ndim}D array")
+                
+                # 检查通道数
+                if frame.shape[2] != 3:
+                    print(f"Warning: Image array has {frame.shape[2]} channels, expected 3 (RGB)")
                 
                 # 运行跟踪器
                 info = seq.frame_info(frame_num)
