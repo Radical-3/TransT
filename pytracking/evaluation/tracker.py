@@ -707,8 +707,45 @@ class Tracker:
             print("Resetting target pos to gt!")
 
     def _read_image(self, image_file: str):
-        im = cv.imread(image_file)
-        return cv.cvtColor(im, cv.COLOR_BGR2RGB)
+        import numpy as np
+        # 检查文件是否为.npy格式
+        if image_file.endswith('.npy'):
+            # 加载npy文件
+            data = np.load(image_file, allow_pickle=True)
+            # 处理不同格式的数据
+            if isinstance(data, dict):
+                im = data['image']
+            elif isinstance(data, np.ndarray):
+                if data.ndim == 0:
+                    data_obj = data.item()
+                    if isinstance(data_obj, dict) and 'image' in data_obj:
+                        im = data_obj['image']
+                    else:
+                        raise ValueError(f"无法从.npy文件中提取图像: {image_file}")
+                elif data.shape == (1,):
+                    data_obj = data[0]
+                    if isinstance(data_obj, dict) and 'image' in data_obj:
+                        im = data_obj['image']
+                    else:
+                        raise ValueError(f"无法从.npy文件中提取图像: {image_file}")
+                elif data.shape == (6,):
+                    # 形状为(6,)的数组，顺序: identifier, image, image_mask, label, camera_position, relative_remove
+                    im = data[1]
+                else:
+                    raise ValueError(f"无法从.npy文件中提取图像: {image_file}")
+            else:
+                raise ValueError(f"无法从.npy文件中提取图像: {image_file}")
+            # 确保图像是RGB格式
+            if len(im.shape) == 3 and im.shape[2] == 3:
+                return im
+            else:
+                raise ValueError(f"图像格式不正确: {image_file}")
+        else:
+            # 对于非.npy文件，使用原始方法
+            im = cv.imread(image_file)
+            if im is None:
+                raise ValueError(f"无法读取图像文件: {image_file}")
+            return cv.cvtColor(im, cv.COLOR_BGR2RGB)
 
 
 
